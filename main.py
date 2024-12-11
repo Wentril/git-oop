@@ -1,25 +1,46 @@
-print("Hello world")
+import fastapi
+import uvicorn
+import sqlite3
+
+DATABASE_FILE = "example.db"
+app = fastapi.FastAPI()
 
 
-def factorial(n):
-    if n == 0:
-        return 0
-    elif n == 1:
-        return 1
-    else:
-        result = 1
-        for i in range(2, n + 1):
-            result *= i
-        return result
+@app.get("/")
+def root():
+    return {"Hello": "World"}
 
-print("Hi")
-# function to sum two numbers
-def add(a, b):
-    return a + b
+
+@app.post("/temperature")
+def post_temperature(temperature: float):
+    conn = sqlite3.connect(DATABASE_FILE)
+    cursor = conn.cursor()
+    cursor.execute(f"INSERT INTO temperature VALUES (NULL, {temperature})")
+    conn.commit()
+    return {"status": "ok"}
+
+
+@app.get("/temperature")
+def get_last_temperature():
+    conn = sqlite3.connect(DATABASE_FILE)
+    cursor = conn.cursor()
+    res = cursor.execute("SELECT * FROM temperature ORDER BY id DESC LIMIT 1")
+    return {"temperature": res.fetchone()}
+
+
+@app.get("/temperature_list")
+def get_temperature_list():
+    conn = sqlite3.connect(DATABASE_FILE)
+    cursor = conn.cursor()
+    res = cursor.execute("SELECT * FROM temperature")
+    return {"temperature": res.fetchall()}
 
 
 if __name__ == "__main__":
+    conn = sqlite3.connect(DATABASE_FILE)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS temperature(id integer primary key autoincrement, value)''')
+    conn.commit()
+    conn.close()
 
-    print("Factorial of 4 is: ", factorial(4))
-
-    print("Sum of 5 and 6 is: ", add(5, 6))
+    uvicorn.run("main:app", reload=True)
